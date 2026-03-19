@@ -1,1 +1,4 @@
 project_id = "piselrabhwptrvddsdwe"
+
+[functions.analyze-jd]
+verify_jwt = false
