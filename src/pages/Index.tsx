@@ -88,40 +88,35 @@ const Index = () => {
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
-      {/* Header */}
-      <div className="gradient-hero py-4 px-4 flex-shrink-0">
-        <div className="max-w-7xl mx-auto flex items-center justify-center gap-3">
-          <Sparkles className="h-5 w-5 text-primary" />
-          <h1 className="text-xl font-bold text-primary-foreground font-display tracking-tight">
-            找工作神器
-          </h1>
-          <span className="text-primary-foreground/60 text-sm hidden sm:inline">
-            把看不懂的JD，变成拿offer的行动指南
-          </span>
-        </div>
-      </div>
-
-      {/* Top input area */}
-      <div className="flex-shrink-0 border-b border-border bg-card px-4 py-4">
-        <div className="max-w-7xl mx-auto">
-          <div className="grid grid-cols-1 lg:grid-cols-[1fr_auto] gap-4 items-end">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <JDInput value={jdText} onChange={setJdText} disabled={isAnyLoading} />
-              <div className="space-y-3">
-                <ResumeUpload onTextExtracted={setResumeText} disabled={isAnyLoading} />
-                <Button
-                  variant="hero"
-                  size="lg"
-                  onClick={handleAnalyze}
-                  disabled={!jdText.trim() || isAnyLoading}
-                  className="w-full"
-                >
-                  <Rocket className="h-5 w-5" />
-                  {isAnyLoading ? "分析中..." : "开始分析"}
-                </Button>
-              </div>
-            </div>
+      {/* Header with tabs */}
+      <div className="gradient-hero py-3 px-4 flex-shrink-0">
+        <div className="max-w-7xl mx-auto flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Sparkles className="h-5 w-5 text-primary" />
+            <h1 className="text-lg font-bold text-primary-foreground font-display tracking-tight">
+              找工作神器
+            </h1>
           </div>
+
+          {/* Top-level tab buttons */}
+          <Tabs
+            value={activeTab}
+            onValueChange={(v) => setActiveTab(v as AnalysisTab)}
+          >
+            <TabsList>
+              {(Object.keys(TAB_CONFIG) as AnalysisTab[]).map((tab) => (
+                <TabsTrigger key={tab} value={tab} className="gap-1.5">
+                  <span>{TAB_CONFIG[tab].icon}</span>
+                  {TAB_CONFIG[tab].label}
+                  {loading[tab] && (
+                    <span className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse" />
+                  )}
+                </TabsTrigger>
+              ))}
+            </TabsList>
+          </Tabs>
+
+          <div className="w-24" />
         </div>
       </div>
 
@@ -137,62 +132,65 @@ const Index = () => {
         </div>
       )}
 
-      {/* Tabs + content area */}
-      <div className="flex-1 flex flex-col overflow-hidden">
-        {hasAnalyzed ? (
-          <Tabs
-            value={activeTab}
-            onValueChange={(v) => setActiveTab(v as AnalysisTab)}
-            className="flex flex-col flex-1 overflow-hidden"
-          >
-            {/* Tab bar */}
-            <div className="flex-shrink-0 border-b border-border bg-secondary/30 px-4">
-              <div className="max-w-7xl mx-auto py-2">
-                <TabsList className="w-fit">
-                  {(Object.keys(TAB_CONFIG) as AnalysisTab[]).map((tab) => (
-                    <TabsTrigger key={tab} value={tab} className="gap-1.5">
-                      <span>{TAB_CONFIG[tab].icon}</span>
-                      {TAB_CONFIG[tab].label}
-                      {loading[tab] && (
-                        <span className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse" />
-                      )}
-                    </TabsTrigger>
-                  ))}
-                </TabsList>
-              </div>
+      {/* Main content: left input + right results */}
+      <div className="flex-1 flex overflow-hidden">
+        {/* Left panel: Input */}
+        <div className="w-full lg:w-[380px] xl:w-[420px] flex-shrink-0 border-r border-border bg-card overflow-y-auto">
+          <div className="p-5 space-y-5">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-medium">
+              <Sparkles className="h-3 w-3" />
+              AI 驱动
             </div>
 
-            {/* Tab content */}
-            {(Object.keys(TAB_CONFIG) as AnalysisTab[]).map((tab) => (
-              <TabsContent key={tab} value={tab} className="flex-1 mt-0 overflow-auto">
-                <div className="max-w-7xl mx-auto px-4 py-4">
-                  <div className="grid grid-cols-1 lg:grid-cols-[280px_1fr] gap-4 min-h-[50vh]">
-                    <PromptEditor
-                      tab={tab}
-                      value={prompts[tab]}
-                      onChange={(v) => setPrompts((prev) => ({ ...prev, [tab]: v }))}
-                      onRegenerate={() => runAnalysis(tab)}
-                      disabled={loading[tab]}
-                    />
-                    <ResultPanel
-                      tab={tab}
-                      content={results[tab]}
-                      isStreaming={loading[tab]}
-                    />
-                  </div>
-                </div>
-              </TabsContent>
-            ))}
-          </Tabs>
-        ) : (
-          <div className="flex-1 flex items-center justify-center text-muted-foreground">
-            <div className="text-center space-y-3">
-              <Sparkles className="h-12 w-12 mx-auto opacity-20" />
-              <p className="text-lg font-medium">粘贴JD，点击「开始分析」</p>
-              <p className="text-sm">分析结果将在此处展示</p>
-            </div>
+            <JDInput value={jdText} onChange={setJdText} disabled={isAnyLoading} />
+            <ResumeUpload onTextExtracted={setResumeText} disabled={isAnyLoading} />
+
+            <Button
+              variant="hero"
+              size="lg"
+              onClick={handleAnalyze}
+              disabled={!jdText.trim() || isAnyLoading}
+              className="w-full"
+            >
+              <Rocket className="h-5 w-5" />
+              {isAnyLoading ? "分析中..." : "开始分析"}
+            </Button>
+
+            <p className="text-center text-xs text-muted-foreground">
+              由 AI 驱动 · 你的隐私数据不会被存储
+            </p>
           </div>
-        )}
+        </div>
+
+        {/* Right panel: Tab content */}
+        <div className="flex-1 flex flex-col overflow-hidden min-w-0">
+          {hasAnalyzed ? (
+            <div className="flex-1 overflow-auto p-4">
+              <div className="grid grid-cols-1 xl:grid-cols-[280px_1fr] gap-4 min-h-[50vh]">
+                <PromptEditor
+                  tab={activeTab}
+                  value={prompts[activeTab]}
+                  onChange={(v) => setPrompts((prev) => ({ ...prev, [activeTab]: v }))}
+                  onRegenerate={() => runAnalysis(activeTab)}
+                  disabled={loading[activeTab]}
+                />
+                <ResultPanel
+                  tab={activeTab}
+                  content={results[activeTab]}
+                  isStreaming={loading[activeTab]}
+                />
+              </div>
+            </div>
+          ) : (
+            <div className="flex-1 flex items-center justify-center text-muted-foreground">
+              <div className="text-center space-y-3">
+                <Sparkles className="h-12 w-12 mx-auto opacity-20" />
+                <p className="text-lg font-medium">粘贴JD，点击「开始分析」</p>
+                <p className="text-sm">分析结果将在此处展示</p>
+              </div>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
