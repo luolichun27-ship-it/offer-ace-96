@@ -144,7 +144,13 @@ const Index = () => {
             </div>
 
             <JDInput value={jdText} onChange={setJdText} disabled={isAnyLoading} />
-            <ResumeUpload onTextExtracted={setResumeText} disabled={isAnyLoading} />
+            <ResumeUpload
+              onTextExtracted={(text, name) => {
+                setResumeText(text);
+                setResumeFileName(name);
+              }}
+              disabled={isAnyLoading}
+            />
 
             <Button
               variant="hero"
