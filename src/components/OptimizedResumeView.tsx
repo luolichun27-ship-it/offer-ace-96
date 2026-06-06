@@ -1,5 +1,5 @@
 import { useMemo, useRef, useState } from "react";
-import { Download, FileText, FileType2, Loader2 } from "lucide-react";
+import { FileText, FileType2, Loader2 } from "lucide-react";
 import {
   Document,
   Packer,
