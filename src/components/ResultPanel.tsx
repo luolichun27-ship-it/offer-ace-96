@@ -34,7 +34,17 @@ export function ResultPanel({ tab, content, isStreaming }: ResultPanelProps) {
           isResume ? (
             <OptimizedResumeView content={content} />
           ) : (
-            <div className="prose prose-sm max-w-none prose-headings:text-foreground prose-p:text-foreground prose-li:text-foreground prose-strong:text-foreground prose-a:text-primary">
+            <div className="prose prose-sm max-w-none text-foreground
+              prose-headings:text-foreground prose-headings:font-semibold
+              prose-h2:mt-8 prose-h2:mb-3 prose-h2:pb-2 prose-h2:border-b prose-h2:border-border prose-h2:text-base
+              prose-h3:mt-6 prose-h3:mb-2 prose-h3:text-sm
+              first:prose-h2:mt-0
+              prose-p:text-foreground prose-p:leading-relaxed prose-p:my-3
+              prose-ul:my-3 prose-ul:space-y-1.5 prose-ol:my-3 prose-ol:space-y-1.5
+              prose-li:text-foreground prose-li:leading-relaxed prose-li:marker:text-primary
+              prose-strong:text-foreground prose-strong:font-semibold
+              prose-a:text-primary
+              prose-hr:my-6 prose-hr:border-border">
               <ReactMarkdown>{content}</ReactMarkdown>
             </div>
           )
