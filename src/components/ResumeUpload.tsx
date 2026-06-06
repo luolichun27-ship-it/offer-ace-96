@@ -67,7 +67,7 @@ export function ResumeUpload({ onTextExtracted, disabled }: ResumeUploadProps) {
           variant: "destructive",
         });
       }
-      onTextExtracted(text);
+      onTextExtracted(text, file.name);
     } catch (e) {
       console.error(e);
       toast({
