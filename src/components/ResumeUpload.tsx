@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 
 interface ResumeUploadProps {
-  onTextExtracted: (text: string) => void;
+  onTextExtracted: (text: string, fileName?: string) => void;
   disabled?: boolean;
 }
 
