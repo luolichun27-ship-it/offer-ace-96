@@ -185,6 +185,7 @@ const Index = () => {
                   tab={activeTab}
                   content={results[activeTab]}
                   isStreaming={loading[activeTab]}
+                  resumeFileName={resumeFileName}
                 />
               </div>
             </div>
