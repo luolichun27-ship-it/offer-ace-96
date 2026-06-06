@@ -14,6 +14,7 @@ const Index = () => {
   const { toast } = useToast();
   const [jdText, setJdText] = useState("");
   const [resumeText, setResumeText] = useState("");
+  const [resumeFileName, setResumeFileName] = useState<string | undefined>(undefined);
   const [activeTab, setActiveTab] = useState<AnalysisTab>("jdAnalysis");
   const [hasAnalyzed, setHasAnalyzed] = useState(false);
 
