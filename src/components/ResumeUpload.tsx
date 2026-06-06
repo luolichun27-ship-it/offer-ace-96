@@ -88,7 +88,7 @@ export function ResumeUpload({ onTextExtracted, disabled }: ResumeUploadProps) {
 
   const clear = () => {
     setFileName(null);
-    onTextExtracted("");
+    onTextExtracted("", undefined);
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
