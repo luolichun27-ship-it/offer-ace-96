@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 
 interface ResumeUploadProps {
-  onTextExtracted: (text: string) => void;
+  onTextExtracted: (text: string, fileName?: string) => void;
   disabled?: boolean;
 }
 
@@ -67,7 +67,7 @@ export function ResumeUpload({ onTextExtracted, disabled }: ResumeUploadProps) {
           variant: "destructive",
         });
       }
-      onTextExtracted(text);
+      onTextExtracted(text, file.name);
     } catch (e) {
       console.error(e);
       toast({
@@ -88,7 +88,7 @@ export function ResumeUpload({ onTextExtracted, disabled }: ResumeUploadProps) {
 
   const clear = () => {
     setFileName(null);
-    onTextExtracted("");
+    onTextExtracted("", undefined);
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 

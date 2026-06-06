@@ -14,6 +14,7 @@ const Index = () => {
   const { toast } = useToast();
   const [jdText, setJdText] = useState("");
   const [resumeText, setResumeText] = useState("");
+  const [resumeFileName, setResumeFileName] = useState<string | undefined>(undefined);
   const [activeTab, setActiveTab] = useState<AnalysisTab>("jdAnalysis");
   const [hasAnalyzed, setHasAnalyzed] = useState(false);
 
@@ -143,7 +144,13 @@ const Index = () => {
             </div>
 
             <JDInput value={jdText} onChange={setJdText} disabled={isAnyLoading} />
-            <ResumeUpload onTextExtracted={setResumeText} disabled={isAnyLoading} />
+            <ResumeUpload
+              onTextExtracted={(text, name) => {
+                setResumeText(text);
+                setResumeFileName(name);
+              }}
+              disabled={isAnyLoading}
+            />
 
             <Button
               variant="hero"
@@ -178,6 +185,7 @@ const Index = () => {
                   tab={activeTab}
                   content={results[activeTab]}
                   isStreaming={loading[activeTab]}
+                  resumeFileName={resumeFileName}
                 />
               </div>
             </div>
