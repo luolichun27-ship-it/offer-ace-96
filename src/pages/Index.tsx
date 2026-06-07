@@ -1,205 +1,264 @@
-import { useState, useCallback } from "react";
-import { Rocket, Sparkles } from "lucide-react";
+import { useCallback, useMemo, useState } from "react";
+import { Search, Sparkles, Rocket } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { JDInput } from "@/components/JDInput";
-import { ResumeUpload } from "@/components/ResumeUpload";
-import { PromptEditor } from "@/components/PromptEditor";
-import { ResultPanel } from "@/components/ResultPanel";
-import { DEFAULT_PROMPTS, TAB_CONFIG, type AnalysisTab } from "@/lib/default-prompts";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import { TaskCard } from "@/components/TaskCard";
+import {
+  TASKS,
+  SCENES,
+  COUNTS,
+  renderPrompt,
+  type Scene,
+  type TaskId,
+} from "@/lib/expansion-tasks";
 import { streamAnalysis } from "@/lib/stream-chat";
 import { useToast } from "@/hooks/use-toast";
+import { cn } from "@/lib/utils";
+
+const EXAMPLES = [
+  "油皮粉底液",
+  "可乐鸡翅做法",
+  "大码女装夏款",
+  "户外露营攻略",
+  "夏天脸上爱出油用什么护肤品",
+];
+
+type StateMap = Record<TaskId, string>;
+type LoadingMap = Record<TaskId, boolean>;
 
 const Index = () => {
   const { toast } = useToast();
-  const [jdText, setJdText] = useState("");
-  const [resumeText, setResumeText] = useState("");
-  const [resumeFileName, setResumeFileName] = useState<string | undefined>(undefined);
-  const [activeTab, setActiveTab] = useState<AnalysisTab>("jdAnalysis");
-  const [hasAnalyzed, setHasAnalyzed] = useState(false);
+  const [query, setQuery] = useState("");
+  const [scene, setScene] = useState<Scene>("shelf");
+  const [count, setCount] = useState<(typeof COUNTS)[number]>(10);
 
-  const [prompts, setPrompts] = useState({
-    jdAnalysis: DEFAULT_PROMPTS.jdAnalysis,
-    dailyWork: DEFAULT_PROMPTS.dailyWork,
-    resumeOptimize: DEFAULT_PROMPTS.resumeOptimize,
-  });
-  const [results, setResults] = useState({
-    jdAnalysis: "",
-    dailyWork: "",
-    resumeOptimize: "",
-  });
-  const [loading, setLoading] = useState({
-    jdAnalysis: false,
-    dailyWork: false,
-    resumeOptimize: false,
-  });
+  const initialPrompts = useMemo(() => {
+    const map = {} as StateMap;
+    for (const t of TASKS) map[t.id] = t.prompt;
+    return map;
+  }, []);
+  const initialResults = useMemo(() => {
+    const map = {} as StateMap;
+    for (const t of TASKS) map[t.id] = "";
+    return map;
+  }, []);
+  const initialLoading = useMemo(() => {
+    const map = {} as LoadingMap;
+    for (const t of TASKS) map[t.id] = false;
+    return map;
+  }, []);
 
-  const runAnalysis = useCallback(
-    async (tab: AnalysisTab) => {
-      if (!jdText.trim()) {
-        toast({ title: "请先输入岗位JD", variant: "destructive" });
+  const [prompts, setPrompts] = useState<StateMap>(initialPrompts);
+  const [results, setResults] = useState<StateMap>(initialResults);
+  const [loading, setLoading] = useState<LoadingMap>(initialLoading);
+
+  const isAnyLoading = Object.values(loading).some(Boolean);
+
+  const runTask = useCallback(
+    async (taskId: TaskId, queryOverride?: string) => {
+      const q = (queryOverride ?? query).trim();
+      if (!q) {
+        toast({ title: "请先输入 Query", variant: "destructive" });
         return;
       }
-      if (tab === "resumeOptimize" && !resumeText) {
-        toast({ title: "简历优化需要上传简历", variant: "destructive" });
-        return;
-      }
+      const template = prompts[taskId];
+      const userPrompt = renderPrompt(template, { query: q, scene, count });
 
-      setLoading((prev) => ({ ...prev, [tab]: true }));
-      setResults((prev) => ({ ...prev, [tab]: "" }));
+      setLoading((p) => ({ ...p, [taskId]: true }));
+      setResults((p) => ({ ...p, [taskId]: "" }));
 
-      let accumulated = "";
+      let acc = "";
       try {
         await streamAnalysis({
-          jdText,
-          resumeText: tab === "resumeOptimize" ? resumeText : undefined,
-          customPrompt: prompts[tab],
+          userPrompt,
           onDelta: (chunk) => {
-            accumulated += chunk;
-            setResults((prev) => ({ ...prev, [tab]: accumulated }));
+            acc += chunk;
+            setResults((p) => ({ ...p, [taskId]: acc }));
           },
-          onDone: () => setLoading((prev) => ({ ...prev, [tab]: false })),
-          onError: (error) => {
-            toast({ title: "分析失败", description: error, variant: "destructive" });
-            setLoading((prev) => ({ ...prev, [tab]: false }));
+          onDone: () => setLoading((p) => ({ ...p, [taskId]: false })),
+          onError: (err) => {
+            toast({ title: "生成失败", description: err, variant: "destructive" });
+            setLoading((p) => ({ ...p, [taskId]: false }));
           },
         });
       } catch {
-        toast({ title: "网络错误", description: "请检查网络连接后重试", variant: "destructive" });
-        setLoading((prev) => ({ ...prev, [tab]: false }));
+        toast({ title: "网络错误", description: "请检查网络后重试", variant: "destructive" });
+        setLoading((p) => ({ ...p, [taskId]: false }));
       }
     },
-    [jdText, resumeText, prompts, toast]
+    [query, scene, count, prompts, toast]
   );
 
-  const handleAnalyze = () => {
-    if (!jdText.trim()) {
-      toast({ title: "请先输入岗位JD", variant: "destructive" });
+  const handleGenerateAll = useCallback(() => {
+    if (!query.trim()) {
+      toast({ title: "请先输入 Query", variant: "destructive" });
       return;
     }
-    setHasAnalyzed(true);
-    runAnalysis("jdAnalysis");
-    runAnalysis("dailyWork");
-    if (resumeText) {
-      runAnalysis("resumeOptimize");
-    }
+    TASKS.forEach((t) => runTask(t.id));
+  }, [query, runTask, toast]);
+
+  const useExample = (ex: string) => {
+    setQuery(ex);
   };
 
-  const isAnyLoading = loading.jdAnalysis || loading.dailyWork || loading.resumeOptimize;
-
   return (
-    <div className="min-h-screen bg-background flex flex-col">
-      {/* Header with tabs */}
-      <div className="gradient-hero py-3 px-4 flex-shrink-0">
-        <div className="max-w-7xl mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Sparkles className="h-5 w-5 text-primary" />
-            <h1 className="text-lg font-bold text-primary-foreground font-display tracking-tight">
-              找工作神器
-            </h1>
+    <div className="min-h-screen bg-background">
+      {/* Hero / control bar */}
+      <header className="border-b border-border bg-gradient-to-b from-secondary/30 to-background">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 space-y-5">
+          <div className="flex items-center gap-3">
+            <div className="h-10 w-10 rounded-xl flex items-center justify-center bg-primary/10 text-primary">
+              <Sparkles className="h-5 w-5" />
+            </div>
+            <div>
+              <h1 className="text-xl sm:text-2xl font-bold text-foreground tracking-tight">
+                AI Search Query Expansion Lab
+              </h1>
+              <p className="text-xs sm:text-sm text-muted-foreground">
+                抖音搜索策略 Demo · 关键词扩词 · 意图识别 · Sug 联想 · 排序策略
+              </p>
+            </div>
           </div>
 
-          {/* Top-level tab buttons */}
-          <Tabs
-            value={activeTab}
-            onValueChange={(v) => setActiveTab(v as AnalysisTab)}
-          >
-            <TabsList>
-              {(Object.keys(TAB_CONFIG) as AnalysisTab[]).map((tab) => (
-                <TabsTrigger key={tab} value={tab} className="gap-1.5">
-                  <span>{TAB_CONFIG[tab].icon}</span>
-                  {TAB_CONFIG[tab].label}
-                  {loading[tab] && (
-                    <span className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse" />
-                  )}
-                </TabsTrigger>
+          {/* Query input row */}
+          <div className="rounded-2xl border border-border bg-card shadow-sm p-4 sm:p-5 space-y-4">
+            <div>
+              <label className="text-xs font-medium text-muted-foreground mb-1.5 block">
+                Query
+              </label>
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  placeholder="输入一个搜索词，如：油皮粉底液"
+                  className="pl-9 h-11 text-base"
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && !isAnyLoading) handleGenerateAll();
+                  }}
+                />
+              </div>
+              <div className="flex flex-wrap gap-1.5 mt-2">
+                <span className="text-xs text-muted-foreground mr-1">示例：</span>
+                {EXAMPLES.map((ex) => (
+                  <button
+                    key={ex}
+                    type="button"
+                    onClick={() => useExample(ex)}
+                    className="text-xs px-2 py-0.5 rounded-md bg-secondary text-secondary-foreground hover:bg-primary/10 hover:text-primary transition-colors"
+                  >
+                    {ex}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="grid sm:grid-cols-[1fr_1fr_auto] gap-4 items-end">
+              {/* Scene */}
+              <div>
+                <label className="text-xs font-medium text-muted-foreground mb-1.5 block">
+                  搜索场景
+                </label>
+                <div className="flex gap-2">
+                  {SCENES.map((s) => (
+                    <button
+                      key={s.value}
+                      type="button"
+                      onClick={() => setScene(s.value)}
+                      className={cn(
+                        "flex-1 px-3 py-2 rounded-lg border text-sm transition-colors text-left",
+                        scene === s.value
+                          ? "border-primary bg-primary/10 text-primary"
+                          : "border-border bg-background text-foreground hover:border-primary/40"
+                      )}
+                    >
+                      <div className="font-medium">{s.label}</div>
+                      <div className="text-[10px] text-muted-foreground mt-0.5">
+                        {s.hint}
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Count */}
+              <div>
+                <label className="text-xs font-medium text-muted-foreground mb-1.5 block">
+                  拓展数量
+                </label>
+                <div className="flex gap-2">
+                  {COUNTS.map((c) => (
+                    <button
+                      key={c}
+                      type="button"
+                      onClick={() => setCount(c)}
+                      className={cn(
+                        "flex-1 px-3 py-2 rounded-lg border text-sm font-medium transition-colors",
+                        count === c
+                          ? "border-primary bg-primary/10 text-primary"
+                          : "border-border bg-background text-foreground hover:border-primary/40"
+                      )}
+                    >
+                      {c} 条
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <Button
+                variant="hero"
+                size="lg"
+                onClick={handleGenerateAll}
+                disabled={!query.trim() || isAnyLoading}
+                className="sm:w-auto w-full h-11"
+              >
+                <Rocket className="h-5 w-5" />
+                {isAnyLoading ? "生成中…" : "开始生成"}
+              </Button>
+            </div>
+          </div>
+
+          {/* Progress badges */}
+          {isAnyLoading && (
+            <div className="flex flex-wrap gap-2">
+              {TASKS.filter((t) => loading[t.id]).map((t) => (
+                <Badge key={t.id} variant="secondary" className="gap-1.5">
+                  <span className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse" />
+                  {t.title} 生成中
+                </Badge>
               ))}
-            </TabsList>
-          </Tabs>
-
-          <div className="w-24" />
-        </div>
-      </div>
-
-      {/* Loading banner */}
-      {isAnyLoading && (
-        <div className="bg-primary/10 border-b border-primary/20 px-4 py-2 flex-shrink-0">
-          <div className="max-w-7xl mx-auto flex items-center gap-3 text-sm text-primary">
-            <span className="h-2 w-2 rounded-full bg-primary animate-pulse" />
-            {loading.jdAnalysis && "🧠 正在解析JD... "}
-            {loading.dailyWork && "⏱ 正在生成工作日常... "}
-            {loading.resumeOptimize && "✨ 正在优化简历... "}
-          </div>
-        </div>
-      )}
-
-      {/* Main content: left input + right results */}
-      <div className="flex-1 flex overflow-hidden">
-        {/* Left panel: Input */}
-        <div className="w-full lg:w-[380px] xl:w-[420px] flex-shrink-0 border-r border-border bg-card overflow-y-auto">
-          <div className="p-5 space-y-5">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-medium">
-              <Sparkles className="h-3 w-3" />
-              AI 驱动
-            </div>
-
-            <JDInput value={jdText} onChange={setJdText} disabled={isAnyLoading} />
-            <ResumeUpload
-              onTextExtracted={(text, name) => {
-                setResumeText(text);
-                setResumeFileName(name);
-              }}
-              disabled={isAnyLoading}
-            />
-
-            <Button
-              variant="hero"
-              size="lg"
-              onClick={handleAnalyze}
-              disabled={!jdText.trim() || isAnyLoading}
-              className="w-full"
-            >
-              <Rocket className="h-5 w-5" />
-              {isAnyLoading ? "分析中..." : "开始分析"}
-            </Button>
-
-            <p className="text-center text-xs text-muted-foreground">
-              由 AI 驱动 · 你的隐私数据不会被存储
-            </p>
-          </div>
-        </div>
-
-        {/* Right panel: Tab content */}
-        <div className="flex-1 flex flex-col overflow-hidden min-w-0">
-          {hasAnalyzed ? (
-            <div className="flex-1 overflow-auto p-4">
-              <div className="grid grid-cols-1 xl:grid-cols-[280px_1fr] gap-4 min-h-[50vh]">
-                <PromptEditor
-                  tab={activeTab}
-                  value={prompts[activeTab]}
-                  onChange={(v) => setPrompts((prev) => ({ ...prev, [activeTab]: v }))}
-                  onRegenerate={() => runAnalysis(activeTab)}
-                  disabled={loading[activeTab]}
-                />
-                <ResultPanel
-                  tab={activeTab}
-                  content={results[activeTab]}
-                  isStreaming={loading[activeTab]}
-                  resumeFileName={resumeFileName}
-                />
-              </div>
-            </div>
-          ) : (
-            <div className="flex-1 flex items-center justify-center text-muted-foreground">
-              <div className="text-center space-y-3">
-                <Sparkles className="h-12 w-12 mx-auto opacity-20" />
-                <p className="text-lg font-medium">粘贴JD，点击「开始分析」</p>
-                <p className="text-sm">分析结果将在此处展示</p>
-              </div>
             </div>
           )}
         </div>
-      </div>
+      </header>
+
+      {/* Task grid */}
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 py-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+          {TASKS.map((task) => (
+            <TaskCard
+              key={task.id}
+              task={task}
+              prompt={prompts[task.id]}
+              onPromptChange={(v) =>
+                setPrompts((p) => ({ ...p, [task.id]: v }))
+              }
+              onReset={() =>
+                setPrompts((p) => ({ ...p, [task.id]: task.prompt }))
+              }
+              onRegenerate={() => runTask(task.id)}
+              output={results[task.id]}
+              isStreaming={loading[task.id]}
+              disabled={loading[task.id]}
+            />
+          ))}
+        </div>
+
+        <p className="text-center text-xs text-muted-foreground mt-8">
+          由 AI 驱动 · Prompt 修改后仅影响当前任务输出 · 任务之间互不影响
+        </p>
+      </main>
     </div>
   );
 };
