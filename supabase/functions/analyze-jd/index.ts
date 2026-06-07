@@ -10,13 +10,16 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const { jdText, resumeText, customPrompt } = await req.json();
+    const { jdText, resumeText, customPrompt, userPrompt, systemPrompt: sysOverride } = await req.json();
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
 
-    if (!jdText || jdText.trim().length === 0) {
-      return new Response(JSON.stringify({ error: "请输入岗位JD" }), {
+    // New mode: caller supplies fully rendered userPrompt directly
+    const useRaw = typeof userPrompt === "string" && userPrompt.trim().length > 0;
+
+    if (!useRaw && (!jdText || jdText.trim().length === 0)) {
+      return new Response(JSON.stringify({ error: "请输入内容" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
