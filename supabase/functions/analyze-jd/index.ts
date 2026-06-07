@@ -25,37 +25,18 @@ serve(async (req) => {
       });
     }
 
-    const systemPrompt = customPrompt || `你是一位资深的求职教练和招聘专家。你的任务是分析岗位JD（Job Description），并为求职者提供清晰、可操作的求职指南。
+    const systemPrompt = useRaw
+      ? (sysOverride || "你是一个专业的中文 AI 助手，请按用户提示词的要求严格输出，不要添加额外解释。")
+      : (customPrompt || `你是一位资深的求职教练和招聘专家。`);
 
-请用以下结构化格式输出分析结果（使用Markdown）：
-
-## 🎯 岗位概要
-简要总结这个岗位的核心定位、所属行业和级别。
-
-## 📋 核心要求拆解
-将JD中的要求分为「硬性要求」和「加分项」，逐条列出并解释其含义。
-
-## 🔑 关键词提取
-列出简历中必须包含的关键词和技能词汇（ATS友好）。
-
-## 📝 简历优化建议
-针对这个岗位，提供具体的简历调整建议。
-
-## 💬 面试准备要点
-预测可能的面试问题，并提供回答框架。
-
-## 🎯 行动清单
-列出3-5个立即可以开始的具体行动步骤。
-
-请确保：
-- 语言简洁有力，避免废话
-- 建议要具体可执行，不要泛泛而谈
-- 如果JD是英文的，分析结果用中文输出，但保留关键英文术语
-- 如果提供了简历，请对比分析匹配度并给出针对性建议`;
-
-    let userContent = `请分析以下岗位JD：\n\n${jdText}`;
-    if (resumeText && resumeText.trim().length > 0) {
-      userContent += `\n\n---\n\n以下是我的简历内容，请对比分析：\n\n${resumeText}`;
+    let userContent: string;
+    if (useRaw) {
+      userContent = userPrompt;
+    } else {
+      userContent = `请分析以下岗位JD：\n\n${jdText}`;
+      if (resumeText && resumeText.trim().length > 0) {
+        userContent += `\n\n---\n\n以下是我的简历内容，请对比分析：\n\n${resumeText}`;
+      }
     }
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
