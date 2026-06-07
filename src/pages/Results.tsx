@@ -40,7 +40,7 @@ const Results = () => {
 
   useEffect(() => {
     if (!state?.jdText) {
-      navigate("/", { replace: true });
+      navigate("/jd&offer", { replace: true });
       return;
     }
     // Auto-run all analyses on mount
@@ -103,7 +103,7 @@ const Results = () => {
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => navigate("/")}
+            onClick={() => navigate("/jd&offer")}
             className="text-primary-foreground/70 hover:text-primary-foreground hover:bg-primary-foreground/10"
           >
             <ArrowLeft className="h-4 w-4" />
