@@ -189,7 +189,7 @@ export function renderPrompt(
   const sceneLabel =
     SCENES.find((s) => s.value === vars.scene)?.label ?? vars.scene;
   return template
-    .replaceAll("{{query}}", vars.query)
-    .replaceAll("{{scene}}", sceneLabel)
-    .replaceAll("{{count}}", String(vars.count));
+    .split("{{query}}").join(vars.query)
+    .split("{{scene}}").join(sceneLabel)
+    .split("{{count}}").join(String(vars.count));
 }
