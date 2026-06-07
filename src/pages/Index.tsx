@@ -113,10 +113,10 @@ const Index = () => {
             </div>
             <div>
               <h1 className="text-xl sm:text-2xl font-bold text-foreground tracking-tight">
-                AI Search Query Expansion Lab
+                Rubby’s AI Search Query Expansion Lab
               </h1>
               <p className="text-xs sm:text-sm text-muted-foreground">
-                抖音搜索策略 Demo · 关键词扩词 · 意图识别 · Sug 联想 · 排序策略
+                搜索策略 Demo · 关键词扩词 · 意图识别 · Sug 联想 · 排序策略
               </p>
             </div>
           </div>
