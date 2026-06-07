@@ -1,27 +1,28 @@
 const ANALYZE_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/analyze-jd`;
 
-export async function streamAnalysis({
-  jdText,
-  resumeText,
-  customPrompt,
-  onDelta,
-  onDone,
-  onError,
-}: {
-  jdText: string;
+interface StreamArgs {
+  // Legacy mode (JD analyzer)
+  jdText?: string;
   resumeText?: string;
   customPrompt?: string;
+  // New mode (raw prompt)
+  userPrompt?: string;
+  systemPrompt?: string;
   onDelta: (text: string) => void;
   onDone: () => void;
   onError: (error: string) => void;
-}) {
+}
+
+export async function streamAnalysis(args: StreamArgs) {
+  const { onDelta, onDone, onError, ...payload } = args;
+
   const resp = await fetch(ANALYZE_URL, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
       Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
     },
-    body: JSON.stringify({ jdText, resumeText, customPrompt }),
+    body: JSON.stringify(payload),
   });
 
   if (!resp.ok) {
@@ -29,7 +30,6 @@ export async function streamAnalysis({
     onError(errorData.error || "请求失败");
     return;
   }
-
   if (!resp.body) {
     onError("无法获取响应流");
     return;
@@ -49,17 +49,11 @@ export async function streamAnalysis({
     while ((newlineIndex = textBuffer.indexOf("\n")) !== -1) {
       let line = textBuffer.slice(0, newlineIndex);
       textBuffer = textBuffer.slice(newlineIndex + 1);
-
       if (line.endsWith("\r")) line = line.slice(0, -1);
       if (line.startsWith(":") || line.trim() === "") continue;
       if (!line.startsWith("data: ")) continue;
-
       const jsonStr = line.slice(6).trim();
-      if (jsonStr === "[DONE]") {
-        streamDone = true;
-        break;
-      }
-
+      if (jsonStr === "[DONE]") { streamDone = true; break; }
       try {
         const parsed = JSON.parse(jsonStr);
         const content = parsed.choices?.[0]?.delta?.content as string | undefined;
@@ -71,7 +65,6 @@ export async function streamAnalysis({
     }
   }
 
-  // Final flush
   if (textBuffer.trim()) {
     for (let raw of textBuffer.split("\n")) {
       if (!raw) continue;
